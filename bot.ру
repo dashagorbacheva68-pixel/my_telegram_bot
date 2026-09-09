@@ -1,0 +1,163 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+import requests
+import json
+
+# ============================================
+#  НАСТРОЙКИ 
+# ============================================
+TOKEN = "8590110032:AAFKBkZsCwN1KdKbTveEIsNXPsa0eWsHMmk"
+API_KEY = "73GR2A2–35G4DGY–HKX6SFR–J410WAW"  # ВАШ КЛЮЧ ИЗ @poiskkinodev_bot
+ADMIN_ID = 2070340685
+
+# ============================================
+#  ФУНКЦИЯ ПОИСКА В API
+# ============================================
+def search_movie(query):
+    """Ищет фильм в PoiskKino API и возвращает информацию."""
+    try:
+        # Запрос к API (поиск по названию)
+        url = f"https://api.poiskkino.dev/v1.4/movie/search?query={query.replace(' ', '+')}"
+        headers = {"X-API-KEY": API_KEY}
+        response = requests.get(url, headers=headers, timeout=10)
+        data = response.json()
+        
+        if data and data.get('docs') and len(data['docs']) > 0:
+            # Берём первый результат
+            movie = data['docs'][0]
+            return {
+                'id': movie.get('id'),
+                'name': movie.get('name', 'Без названия'),
+                'alternativeName': movie.get('alternativeName', ''),
+                'year': movie.get('year', 'Год неизвестен'),
+                'description': movie.get('description', 'Описание отсутствует'),
+                'shortDescription': movie.get('shortDescription', ''),
+                'rating': movie.get('rating', {}).get('kp', 0),
+                'ratingImdb': movie.get('rating', {}).get('imdb', 0),
+                'poster': movie.get('poster', {}).get('url', None),
+                'genres': [genre['name'] for genre in movie.get('genres', [])[:3]],
+                'countries': [country['name'] for country in movie.get('countries', [])[:2]],
+                'trailer': movie.get('videos', {}).get('trailers', [{}])[0].get('url', None),
+                'ageRating': movie.get('ageRating', ''),
+                'movieLength': movie.get('movieLength', ''),
+            }
+    except Exception as e:
+        print(f"Ошибка API: {e}")
+    return None
+
+# ============================================
+#  КОМАНДЫ БОТА
+# ============================================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("🔍 Поиск фильма", callback_data="search")],
+        [InlineKeyboardButton("🎬 Топ-250", callback_data="top")]
+    ]
+    await update.message.reply_text(
+        "🎬 *Кино-энциклопедия по PoiskKino API*\n\n"
+        "📌 *Поиск:* напиши название фильма\n"
+        "📌 *Топ-250:* список лучших фильмов\n"
+        "📌 *Трейлеры:* с YouTube\n\n"
+        "Нажми кнопку или просто напиши название!",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "search":
+        await query.edit_message_text("✍️ *Введите название фильма:*", parse_mode='Markdown')
+        context.user_data['waiting_search'] = True
+    
+    elif query.data == "top":
+        await query.edit_message_text("⏳ *Загружаю топ-250 фильмов...*", parse_mode='Markdown')
+        # Здесь можно сделать запрос к API для топ-250
+        await query.edit_message_text(
+            "🎬 *Топ-250 фильмов:*\n\n"
+            "1. Зеленая миля (1999) — 9.1\n"
+            "2. Побег из Шоушенка (1994) — 9.3\n"
+            "3. Крестный отец (1972) — 9.0\n\n"
+            "🔍 *Ищи конкретный фильм через поиск!*",
+            parse_mode='Markdown'
+        )
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.user_data.get('waiting_search'):
+        user_query = update.message.text
+        await update.message.reply_text("🔎 *Ищу фильм...*", parse_mode='Markdown')
+        
+        movie = search_movie(user_query)
+        
+        if movie:
+            # Формируем текст
+            text = f"🎬 *{movie['name']}*"
+            if movie['alternativeName']:
+                text += f" ({movie['alternativeName']})"
+            text += f"\n📅 *Год:* {movie['year']}"
+            
+            if movie['movieLength']:
+                text += f"\n⏱️ *Длительность:* {movie['movieLength']} мин"
+            
+            if movie['ageRating']:
+                text += f"\n🔞 *Возраст:* {movie['ageRating']}+"
+            
+            if movie['genres']:
+                text += f"\n🎭 *Жанры:* {', '.join(movie['genres'])}"
+            
+            if movie['countries']:
+                text += f"\n🌍 *Страны:* {', '.join(movie['countries'])}"
+            
+            if movie['rating']:
+                text += f"\n⭐ *Рейтинг КП:* {movie['rating']}"
+            if movie['ratingImdb']:
+                text += f"\n⭐ *Рейтинг IMDb:* {movie['ratingImdb']}"
+            
+            if movie['description']:
+                text += f"\n\n📝 *Описание:* {movie['description'][:500]}..."
+            
+            # Отправляем постер
+            if movie['poster']:
+                await update.message.reply_photo(
+                    photo=movie['poster'],
+                    caption=text,
+                    parse_mode='Markdown'
+                )
+            else:
+                await update.message.reply_text(text, parse_mode='Markdown')
+            
+            # Отправляем трейлер (если есть)
+            if movie['trailer']:
+                keyboard = [[InlineKeyboardButton("▶️ Смотреть трейлер", url=movie['trailer'])]]
+                await update.message.reply_text(
+                    "🎥 *Трейлер на YouTube*",
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
+        else:
+            await update.message.reply_text(
+                "😕 *Фильм не найден.*\n"
+                "Проверьте название или попробуйте другой запрос.",
+                parse_mode='Markdown'
+            )
+        
+        context.user_data['waiting_search'] = False
+
+# ============================================
+#  ЗАПУСК БОТА
+# ============================================
+def main():
+    app = Application.builder().token(TOKEN).build()
+    
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    print("🤖 Бот-энциклопедия запущен!")
+    print("📚 Используется PoiskKino API")
+    print(f"🔑 API-ключ: {API_KEY[:10]}...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
