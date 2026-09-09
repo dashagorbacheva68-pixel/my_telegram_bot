@@ -7,7 +7,7 @@ import json
 #  НАСТРОЙКИ 
 # ============================================
 TOKEN = "8590110032:AAFKBkZsCwN1KdKbTveEIsNXPsa0eWsHMmk"
-API_KEY = "73GR2A2–35G4DGY–HKX6SFR–J410WAW"  # ВАШ КЛЮЧ ИЗ @poiskkinodev_bot
+API_KEY = "73GR2A2-35G4DGY-HKX6SFR-J410WAW"  #
 ADMIN_ID = 2070340685
 
 # ============================================
