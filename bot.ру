@@ -6,9 +6,11 @@ import json
 # ============================================
 #  НАСТРОЙКИ 
 # ============================================
-TOKEN = "8590110032:AAFKBkZsCwN1KdKbTveEIsNXPsa0eWsHMmk"
-API_KEY = "73GR2A2-35G4DGY-HKX6SFR-J410WAW"  
-ADMIN_ID = 2070340685
+import os
+
+TOKEN = os.getenv("TOKEN")
+API_KEY = os.getenv("API_KEY")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
 # ============================================
 #  ФУНКЦИЯ ПОИСКА В API
