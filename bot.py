@@ -158,14 +158,13 @@ if movie['trailer']:
 if movie['url']:
     buttons.append([InlineKeyboardButton("🔗 Открыть на Кинопоиске", url=movie['url'])]) 
 
-if buttons:
-    await update.message.reply_text(
-        "🎬 *Дополнительно:*",
-        reply_markup=InlineKeyboardMarkup(buttons),
-        parse_mode='Markdown'
-    )
-        else:
+        if buttons:
             await update.message.reply_text(
+                "🎬 *Дополнительно:*",
+                ...
+            )
+        else:                  ← else на уровне с if movie:
+            await update.message.reply_text("😕 *Фильм не найден.*")
                 "😕 *Фильм не найден.*\n"
                 "Проверьте название или попробуйте другой запрос.",
                 parse_mode='Markdown'
