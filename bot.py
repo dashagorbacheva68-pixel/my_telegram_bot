@@ -115,7 +115,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Формируем текст
             text = f"🎬 *{movie['name']}*"
             if movie['alternativeName']:
-            text += f" ({movie['alternativeName']})"
+                text += f" ({movie['alternativeName']})"
             text += f"\n📅 *Год:* {movie['year']}"
             if movie['url']:
                 text += f"\n\n🔗 [Открыть на Кинопоиске]({movie['url']})"
