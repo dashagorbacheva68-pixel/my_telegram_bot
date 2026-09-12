@@ -2,30 +2,31 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 import requests
 import json
-
-# ============================================
-#  НАСТРОЙКИ 
-# ============================================
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 
-# Фиктивный веб-сервер для Render
+# ============================================
+#  ФИКТИВНЫЙ ВЕБ-СЕРВЕР ДЛЯ RENDER
+# ============================================
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"OK")
     def log_message(self, format, *args):
-        pass  # отключаем логи
+        pass
 
 def run_health_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), HealthHandler)
     server.serve_forever()
 
-# Запускаем в отдельном потоке
 threading.Thread(target=run_health_server, daemon=True).start()
+
+# ============================================
+#  НАСТРОЙКИ
+# ============================================
 TOKEN = os.getenv("TOKEN")
 API_KEY = os.getenv("API_KEY")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
@@ -36,14 +37,12 @@ ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 def search_movie(query):
     """Ищет фильм в PoiskKino API и возвращает информацию."""
     try:
-        # Запрос к API (поиск по названию)
         url = f"https://api.poiskkino.dev/v1.4/movie/search?query={query.replace(' ', '+')}"
         headers = {"X-API-KEY": API_KEY}
         response = requests.get(url, headers=headers, timeout=10)
         data = response.json()
         
         if data and data.get('docs') and len(data['docs']) > 0:
-            # Берём первый результат
             movie = data['docs'][0]
             return {
                 'id': movie.get('id'),
@@ -94,7 +93,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif query.data == "top":
         await query.edit_message_text("⏳ *Загружаю топ-250 фильмов...*", parse_mode='Markdown')
-        # Здесь можно сделать запрос к API для топ-250
         await query.edit_message_text(
             "🎬 *Топ-250 фильмов:*\n\n"
             "1. Зеленая миля (1999) — 9.1\n"
@@ -112,13 +110,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         movie = search_movie(user_query)
         
         if movie:
-            # Формируем текст
             text = f"🎬 *{movie['name']}*"
             if movie['alternativeName']:
                 text += f" ({movie['alternativeName']})"
             text += f"\n📅 *Год:* {movie['year']}"
-            if movie['url']:
-                text += f"\n\n🔗 [Открыть на Кинопоиске]({movie['url']})"
             
             if movie['movieLength']:
                 text += f"\n⏱️ *Длительность:* {movie['movieLength']} мин"
@@ -140,7 +135,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if movie['description']:
                 text += f"\n\n📝 *Описание:* {movie['description'][:500]}..."
             
-            # Отправляем постер
+            if movie['url']:
+                text += f"\n\n🔗 [Открыть на Кинопоиске]({movie['url']})"
+            
             if movie['poster']:
                 await update.message.reply_photo(
                     photo=movie['poster'],
@@ -150,21 +147,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await update.message.reply_text(text, parse_mode='Markdown')
             
-            # Отправляем трейлер (если есть)
-          # Отправляем кнопки (трейлер + ссылка на Кинопоиск)
-buttons = []            
-if movie['trailer']:
-    buttons.append([InlineKeyboardButton("▶️ Смотреть трейлер", url=movie['trailer'])])
-if movie['url']:
-    buttons.append([InlineKeyboardButton("🔗 Открыть на Кинопоиске", url=movie['url'])]) 
-
-        if buttons:
+            buttons = []
+            if movie['trailer']:
+                buttons.append([InlineKeyboardButton("▶️ Смотреть трейлер", url=movie['trailer'])])
+            if movie['url']:
+                buttons.append([InlineKeyboardButton("🔗 Открыть на Кинопоиске", url=movie['url'])])
+            
+            if buttons:
+                await update.message.reply_text(
+                    "🎬 *Дополнительно:*",
+                    reply_markup=InlineKeyboardMarkup(buttons),
+                    parse_mode='Markdown'
+                )
+        else:
             await update.message.reply_text(
-                "🎬 *Дополнительно:*",
-                ...
-            )
-        else:                  ← else на уровне с if movie:
-            await update.message.reply_text("😕 *Фильм не найден.*")
                 "😕 *Фильм не найден.*\n"
                 "Проверьте название или попробуйте другой запрос.",
                 parse_mode='Markdown'
