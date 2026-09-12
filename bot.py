@@ -115,10 +115,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Формируем текст
             text = f"🎬 *{movie['name']}*"
             if movie['alternativeName']:
-                text += f" ({movie['alternativeName']})"
+            text += f" ({movie['alternativeName']})"
             text += f"\n📅 *Год:* {movie['year']}"
             if movie['url']:
-            text += f"\n\n🔗 [Открыть на Кинопоиске]({movie['url']})"
+                text += f"\n\n🔗 [Открыть на Кинопоиске]({movie['url']})"
             
             if movie['movieLength']:
                 text += f"\n⏱️ *Длительность:* {movie['movieLength']} мин"
@@ -152,7 +152,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Отправляем трейлер (если есть)
           # Отправляем кнопки (трейлер + ссылка на Кинопоиск)
-buttons = []
+buttons = []            
 if movie['trailer']:
     buttons.append([InlineKeyboardButton("▶️ Смотреть трейлер", url=movie['trailer'])])
 if movie['url']:
