@@ -60,6 +60,7 @@ def search_movie(query):
                 'trailer': movie.get('videos', {}).get('trailers', [{}])[0].get('url', None),
                 'ageRating': movie.get('ageRating', ''),
                 'movieLength': movie.get('movieLength', ''),
+                'url': f"https://www.kinopoisk.ru/film/{movie.get('id')}/" if movie.get('id') else None,
             }
     except Exception as e:
         print(f"Ошибка API: {e}")
@@ -116,6 +117,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if movie['alternativeName']:
                 text += f" ({movie['alternativeName']})"
             text += f"\n📅 *Год:* {movie['year']}"
+            if movie['url']:
+    text += f"\n\n🔗 [Открыть на Кинопоиске]({movie['url']})"
             
             if movie['movieLength']:
                 text += f"\n⏱️ *Длительность:* {movie['movieLength']} мин"
@@ -148,13 +151,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(text, parse_mode='Markdown')
             
             # Отправляем трейлер (если есть)
-            if movie['trailer']:
-                keyboard = [[InlineKeyboardButton("▶️ Смотреть трейлер", url=movie['trailer'])]]
-                await update.message.reply_text(
-                    "🎥 *Трейлер на YouTube*",
-                    reply_markup=InlineKeyboardMarkup(keyboard),
-                    parse_mode='Markdown'
-                )
+          # Отправляем кнопки (трейлер + ссылка на Кинопоиск)
+buttons = []
+if movie['trailer']:
+    buttons.append([InlineKeyboardButton("▶️ Смотреть трейлер", url=movie['trailer'])])
+if movie['url']:
+    buttons.append([InlineKeyboardButton("🔗 Открыть на Кинопоиске", url=movie['url'])])
+
+if buttons:
+    await update.message.reply_text(
+        "🎬 *Дополнительно:*",
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode='Markdown'
+    )
         else:
             await update.message.reply_text(
                 "😕 *Фильм не найден.*\n"
