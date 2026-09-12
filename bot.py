@@ -7,7 +7,25 @@ import json
 #  НАСТРОЙКИ 
 # ============================================
 import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
 
+# Фиктивный веб-сервер для Render
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+    def log_message(self, format, *args):
+        pass  # отключаем логи
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
+
+# Запускаем в отдельном потоке
+threading.Thread(target=run_health_server, daemon=True).start()
 TOKEN = os.getenv("TOKEN")
 API_KEY = os.getenv("API_KEY")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
